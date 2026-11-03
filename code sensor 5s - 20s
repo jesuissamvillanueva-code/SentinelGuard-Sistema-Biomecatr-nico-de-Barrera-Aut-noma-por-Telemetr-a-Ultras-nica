@@ -1,0 +1,96 @@
+#include <Servo.h>  
+
+Servo servo;     
+const int trigPin = 5;    
+const int echoPin = 6;   
+const int servoPin = 7;
+
+long duration, dist;    
+long aver[3];  
+
+void setup() { 
+    pinMode(trigPin, OUTPUT);  
+    pinMode(echoPin, INPUT);  
+    
+    // Posiciona el servo a 0° antes de acoplarlo para evitar tirones al encender
+    servo.write(0);          
+    delay(100);
+    servo.attach(servoPin);  
+    delay(100);
+    servo.detach();          // Desacoplado en reposo para que no gaste corriente ni vibre
+}
+
+void measure() {  
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+
+    duration = pulseIn(echoPin, HIGH);
+    dist = (duration / 2) / 29.1;    
+}
+
+void loop() { 
+    // Promedio de 3 lecturas para evitar falsos positivos en reposo
+    for (int i = 0; i <= 2; i++) {  
+        measure();             
+        aver[i] = dist;            
+        delay(10);            
+    }
+    dist = (aver[0] + aver[1] + aver[2]) / 3;    
+
+    // Detección inicial: Objeto entre 10 cm y 120 cm
+    if (dist > 10 && dist <= 120) {
+        servo.attach(servoPin); // Activa el servo únicamente al detectar la intención de uso
+        delay(5);
+        
+        // 1. GIRO RÁPIDO: Abre de 0° a 180° a máxima velocidad
+        for (int pos = 0; pos <= 180; pos += 5) {
+            servo.write(pos);
+            delay(5); 
+        }
+        
+        unsigned long openStartTime = millis(); // Marca de tiempo inicial
+        
+        // 2. TIEMPO MÍNIMO OBLIGATORIO: Se queda abierto exactamente 5 segundos (5000 ms)
+        delay(5000);            
+        
+        unsigned long lastPresenceTime = millis();
+        
+        // 3. BUCLE DE PRESENCIA DINÁMICO (Hasta completar un máximo de 20 segundos totales)
+        while (millis() - openStartTime < 20000) {
+            // Medición rápida en tiempo real mientras está abierto
+            for (int i = 0; i <= 2; i++) {  
+                measure();             
+                aver[i] = dist;            
+                delay(10);            
+            }
+            dist = (aver[0] + aver[1] + aver[2]) / 3;
+
+            unsigned long currentTime = millis();
+
+            // Si sigue detectando presencia, actualizamos el tiempo para mantenerlo abierto
+            if (dist > 10 && dist <= 120) {
+                lastPresenceTime = currentTime; 
+            } 
+            else {
+                // Si la persona se retira y pasa más de 1 segundo sin ver a nadie, se cierra
+                if (currentTime - lastPresenceTime > 1000) {
+                    break; 
+                }
+            }
+            
+            delay(100); // Pausa breve para estabilidad
+        }
+        
+        // 4. RETORNO RÁPIDO: Cierra volviendo de 180° a 0° rápidamente
+        for (int pos = 180; pos >= 0; pos -= 5) {
+            servo.write(pos);
+            delay(5);
+        }
+        
+        delay(200);
+        servo.detach();         // Desacopla el servo para dejarlo libre en reposo
+    }
+}
