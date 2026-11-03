@@ -1,22 +1,23 @@
 # 🛡️ SentinelGuard: Sistema Biomecatrónico de Barrera Autónoma
 
-Subsistema avanzado de sensado y actuación de precisión basado en la plataforma **Arduino**, optimizado para la automatización inteligente de contenedores o barreras perimetrales mediante telemetría ultrasónica y control cinemático de posicionamiento angular. La arquitectura integra un algoritmo de filtrado por promedio móvil de múltiples muestras, gestión energética *fail-safe* por desacoplamiento dinámico y un lazo de control adaptativo de alta fidelidad con supervisión de permanencia temporal.
+Subsistema avanzado de sensado y actuación de precisión basado en la plataforma **Arduino**, optimizado para la automatización inteligente de contenedores, dispensadores sanitarios y accesos perimetrales mediante telemetría ultrasónica y control cinemático de posicionamiento angular. La arquitectura integra un algoritmo de filtrado por promedio móvil de múltiples muestras, gestión energética *fail-safe* por desacoplamiento dinámico y un lazo de control adaptativo con supervisión de permanencia temporal.
 
 ---
 
 ## 📑 Tabla de Contenidos
 1. [Resumen Ejecutivo y Arquitectura del Subsistema](#-resumen-ejecutivo-y-arquitectura-del-subsistema)
-2. [Especificaciones Técnicas del Hardware y Matriz de Pines](#-especificaciones-técnicas-del-hardware-y-matriz-de-pines)
+2. [Especificaciones Técnicas del Hardware y Matriz de Pines](#-specificaciones-técnicas-del-hardware-y-matriz-de-pines)
 3. [Matriz Comparativa de Variantes de Firmware](#-matriz-comparativa-de-variantes-de-firmware)
-4. [Algoritmo de Filtrado y Lógica de Control Dinámico](#-algoritmo-de-filtrado-y-lógica-de-control-dinámico)
-5. [Mitigación de Vibraciones y Gestión de Energía Fail-Safe](#-mitigación-de-vibraciones-y-gestión-de-energía-fail-safe)
-6. [Guía Metodológica de Implementación y Despliegue](#-guía-metodológica-de-implementación-y-despliegue)
+4. [Casos de Uso e Implementaciones Prácticas](#-casos-de-uso-e-implementaciones-prácticas)
+5. [Algoritmo de Filtrado y Lógica de Control Dinámico](#-algoritmo-de-filtrado-y-lógica-de-control-dinámico)
+6. [Mitigación de Vibraciones y Gestión de Energía Fail-Safe](#-mitigación-de-vibraciones-y-gestión-de-energía-fail-safe)
+7. [Guía Metodológica de Implementación y Despliegue](#-guía-metodológica-de-despliegue-e-despliegue)
 
 ---
 
 ## 📌 Resumen Ejecutivo y Arquitectura del Subsistema
 
-El proyecto **SentinelGuard** resuelve la apertura automatizada sin contacto mediante la emisión y recepción de pulsos acústicos de alta frecuencia a través de un transductor ultrasónico (**HC-SR04**). El sistema procesa las ondas reflejadas para determinar la proximidad del usuario, activando de forma síncrona un actuador angular (servomotor) bajo parámetros estrictos de temporización, alcance espacial optimizado y control ergonómico de presencia.
+El proyecto **SentinelGuard** resuelve la apertura automatizada sin contacto físico mediante la emisión y recepción de pulsos acústicos de alta frecuencia a través de un transductor ultrasónico (**HC-SR04**). El sistema procesa las ondas reflejadas para determinar la proximidad del usuario, activando de forma síncrona un actuador angular (servomotor) bajo parámetros estrictos de temporización, alcance espacial optimizado y control ergonómico de presencia.
 
 ---
 
@@ -45,28 +46,14 @@ El repositorio cuenta con dos versiones evolutivas de código adaptadas a difere
 
 ---
 
-## 🔄 Algoritmo de Filtrado y Lógica de Control Dinámico
+## 💡 4. Casos de Uso e Implementaciones Prácticas
 
-1. **Filtrado por Promedio Móvil Temporal:**
-   * Con el objeto de neutralizar falsos positivos derivados de reflexiones espurias o ruido electromagnético, el ciclo de lectura efectúa tres mediciones secuenciales con un intervalo de $10\text{ ms}$, computando la media aritmética discreta:
-     $$\bar{d} = \frac{\text{aver}[0] + \text{aver}[1] + \text{aver}[2]}{3}$$
-2. **Supervisión Dinámica de Presencia (`code sensor 5s - 20s`):**
-   * Tras cumplirse el tiempo de retención inicial, el firmware ejecuta un lazo condicional basado en la función `millis()`. Si el usuario continúa interactuando dentro del rango ($10\text{ cm}$ a $120\text{ cm}$), la marca de tiempo se actualiza de forma fluida. En caso de detectarse la ausencia del usuario por un lapso superior a $1\text{ segundo}$, el sistema interrumpe el ciclo de espera y procede al cierre inmediato de la estructura.
+Gracias a su diseño modular y su lazo de control de alta precisión, **SentinelGuard** puede ser adaptado a múltiples entornos del mundo real:
 
----
+### 🗑️ A. Contenedores de Residuos Inteligentes (*Smart Trash Bins*)
+* **Aplicación:** Automatización de tapas en papeleras domésticas, hospitalarias o industriales.
+* **Ventaja Operativa:** Evita el contacto físico con superficies potencialmente contaminadas. La variante avanzada (`code sensor 5s - 20s`) permite mantener la tapa abierta de manera fluida si el usuario está depositando múltiples objetos, cerrándose de forma automática e inmediata (tras 1 segundo de ausencia) una vez que la persona se retira.
 
-## 🛡️ Mitigación de Vibraciones y Gestión de Energía *Fail-Safe*
-
-* **Desacoplamiento Dinámico en Reposo (`servo.detach()`):** Para evitar la fatiga térmica del circuito de control interno del servomotor y la generación de ruido audible o vibraciones parásitas, el firmware desacopla lógicamente la señal PWM del pin de salida al retornar a la posición base ($0^\circ$).
-* **Posicionamiento Inicial de Seguridad:** Durante la rutina de inicialización (`setup()`), el eje se posiciona forzosamente en el origen antes de habilitar el acoplamiento de control, previniendo saltos mecánicos en los engranajes al energizar el sistema.
-
----
-
-## 🚀 Guía Metodológica de Implementación y Despliegue
-
-1. **Gestión de Dependencias:** Asegúrese de importar la librería nativa del entorno de desarrollo para el manejo de actuadores angulares: `#include <Servo.h>`.
-2. **Validación del Mapeo Físico:** Verifique la correcta asignación de pines: Trigger (Pin 5), Echo (Pin 6) y la línea de control PWM del servo (Pin 7).
-3. **Selección de Variante:** Cargue al microcontrolador el archivo de código fuente de su preferencia según los parámetros de rango y persistencia temporal requeridos en su aplicación.
-
----
-<p align="center">Desarrollado bajo estándares avanzados de ingeniería ciberfísica e IoT.</p>
+### 🧴 B. Dispensadores Automáticos de Agentes Sanitizantes
+* **Aplicación:** Activación mecánica de válvulas de presión en dispensadores de alcohol en gel o jabón líquido.
+* **Ventaja Operativa:** El rango ampliado de detección ($10\text{ cm}$ a $120\text{ cm}$) detecta las manos del usuario de manera inmediata al
