@@ -1,6 +1,6 @@
 # 🛡️ SentinelGuard: Sistema Biomecatrónico de Barrera Autónoma
 
-Subsistema avanzado de sensado y actuación de precisión basado en la plataforma **Arduino**, optimizado para la automatización inteligente de contenedores o barreras perimetrales mediante telemetría ultrasónica y control cinemático de posicionamiento angular. La arquitectura integra un algoritmo de filtrado por promedio móvil de múltiples muestras, gestión energética *fail-safe* por desacoplamiento dinámico y un lazo de control adaptativo con control de permanencia temporal.
+Subsistema avanzado de sensado y actuación de precisión basado en la plataforma **Arduino**, optimizado para la automatización inteligente de contenedores o barreras perimetrales mediante telemetría ultrasónica y control cinemático de posicionamiento angular. La arquitectura integra un algoritmo de filtrado por promedio móvil de múltiples muestras, gestión energética *fail-safe* por desacoplamiento dinámico y un lazo de control adaptativo de alta fidelidad con supervisión de permanencia temporal.
 
 ---
 
@@ -16,7 +16,7 @@ Subsistema avanzado de sensado y actuación de precisión basado en la plataform
 
 ## 📌 Resumen Ejecutivo y Arquitectura del Subsistema
 
-El proyecto **SentinelGuard** resuelve la apertura automatizada sin contacto mediante la emisión y recepción de pulsos acústicos de alta frecuencia a través de un transductor ultrasónico (**HC-SR04**). El sistema procesa las ondas reflejadas para determinar la proximidad del usuario, activando de forma síncrona un actuador angular (servomotor) bajo parámetros estrictos de temporización y seguridad ergonómica.
+El proyecto **SentinelGuard** resuelve la apertura automatizada sin contacto mediante la emisión y recepción de pulsos acústicos de alta frecuencia a través de un transductor ultrasónico (**HC-SR04**). El sistema procesa las ondas reflejadas para determinar la proximidad del usuario, activando de forma síncrona un actuador angular (servomotor) bajo parámetros estrictos de temporización, alcance espacial optimizado y control ergonómico de presencia.
 
 ---
 
@@ -34,24 +34,24 @@ El diseño circuital interconecta componentes discretos de control y potencia ba
 
 ## 📊 Matriz Comparativa de Variantes de Firmware
 
-El repositorio cuenta con dos versiones de código adaptadas a diferentes escenarios operativas e industriales. A continuación se detalla la diferenciación técnica:
+El repositorio cuenta con dos versiones evolutivas de código adaptadas a diferentes escenarios de rendimiento operativo:
 
-| Parámetro / Característica | Versión Base (`code sensor 5s - 80cm`) | Versión Avanzada Optimizada (`code sensor 3.5s - max cm`) |
+| Parámetro / Característica | Versión Estándar (`code sensor 5s - 80cm`) | Versión Optimizada Avanzada (`code sensor 5s - 20s`) |
 | :--- | :--- | :--- |
-| **Rango Geométrico de Detección** | Restringido de $30\text{ cm}$ a $80\text{ cm}$ | **Ampliado de $10\text{ cm}$ a $120\text{ cm}$** (Cobertura espacial superior y detección optimizada al 100%) |
-| **Tiempo de Apertura Inicial** | Fijo e inalterable de $5000\text{ ms}$ ($5\text{ segundos}$) | **Dinamizado a $3500\text{ ms}$** ($3.5\text{ segundos}$ de espera mínima obligatoria) |
-| **Control de Permanencia / Presencia** | Cierre automático estricto tras cumplirse el tiempo base | **Bucle de supervisión adaptativa (`while`)** de hasta $20\text{ segundos}$ adicionales que detecta si el usuario sigue presente o se retira anticipadamente |
-| **Algoritmo de Cierre Inteligente** | Secuencial lineal sin reevaluación de entorno | **Confirmación anti-parpadeo** (Doble lectura de $300\text{ ms}$) para evitar falsos cierres por interferencia óptica o acústica |
+| **Rango Geométrico de Detección** | Restringido de $30\text{ cm}$ a $80\text{ cm}$ | **Ampliado de $10\text{ cm}$ a $120\text{ cm}$** (Mayor cobertura de proximidad y sensibilidad óptima) |
+| **Tiempo de Apertura Inicial** | Fijo de $5000\text{ ms}$ ($5\text{ segundos}$) | **Fijo inicial de $5000\text{ ms}$** ($5\text{ segundos}$ de retención obligatoria al abrir) |
+| **Lógica de Permanencia / Presencia** | Cierre automático lineal inmediato al cumplirse el tiempo base | **Bucle de supervisión dinámica con temporizador flotante (`millis()`)** que evalúa presencia hasta por un límite de $20\text{ segundos}$ |
+| **Estrategia de Cierre Adaptativo** | Secuencial sin reevaluación del entorno activo | **Cierre inteligente anticipado ($1\text{ segundo}$ de gracia)** si la persona se retira antes de agotar el tiempo máximo |
 
 ---
 
 ## 🔄 Algoritmo de Filtrado y Lógica de Control Dinámico
 
 1. **Filtrado por Promedio Móvil Temporal:**
-   * Con el objeto de neutralizar falsos positivos derivados de reflexiones espurias o ruido electromagnético, el bucle principal efectúa tres mediciones secuenciales de distancia con un intervalo de $10\text{ ms}$, computando la media aritmética discreta:
+   * Con el objeto de neutralizar falsos positivos derivados de reflexiones espurias o ruido electromagnético, el ciclo de lectura efectúa tres mediciones secuenciales con un intervalo de $10\text{ ms}$, computando la media aritmética discreta:
      $$\bar{d} = \frac{\text{aver}[0] + \text{aver}[1] + \text{aver}[2]}{3}$$
-2. **Lógica de Permanencia Adaptativa (`code sensor 3.5s - max cm`):**
-   * Tras la apertura inicial de $3.5\text{ segundos}$, el firmware evalúa dinámicamente si el objeto permanece en el cono de cobertura. Si el usuario se retira antes de los $20\text{ segundos}$ límite, el sistema valida la ausencia mediante un re-muestreo de seguridad y ejecuta el cierre inmediato, optimizando los tiempos operativos del sistema biomecatrónico.
+2. **Supervisión Dinámica de Presencia (`code sensor 5s - 20s`):**
+   * Tras cumplirse el tiempo de retención inicial, el firmware ejecuta un lazo condicional basado en la función `millis()`. Si el usuario continúa interactuando dentro del rango ($10\text{ cm}$ a $120\text{ cm}$), la marca de tiempo se actualiza de forma fluida. En caso de detectarse la ausencia del usuario por un lapso superior a $1\text{ segundo}$, el sistema interrumpe el ciclo de espera y procede al cierre inmediato de la estructura.
 
 ---
 
@@ -64,9 +64,9 @@ El repositorio cuenta con dos versiones de código adaptadas a diferentes escena
 
 ## 🚀 Guía Metodológica de Implementación y Despliegue
 
-1. **Gestión de Dependencias:** Importe la librería nativa del entorno para el manejo de actuadores angulares: `#include <Servo.h>`.
-2. **Validación del Mapeo Físico:** Verifique las conexiones del Trigger (Pin 5), Echo (Pin 6) y la línea PWM del servo (Pin 7).
-3. **Selección del Archivo Fuente:** Cargue al microcontrolador la variante de su preferencia ubicada en el repositorio según los requerimientos de rango y tiempo de retención deseados.
+1. **Gestión de Dependencias:** Asegúrese de importar la librería nativa del entorno de desarrollo para el manejo de actuadores angulares: `#include <Servo.h>`.
+2. **Validación del Mapeo Físico:** Verifique la correcta asignación de pines: Trigger (Pin 5), Echo (Pin 6) y la línea de control PWM del servo (Pin 7).
+3. **Selección de Variante:** Cargue al microcontrolador el archivo de código fuente de su preferencia según los parámetros de rango y persistencia temporal requeridos en su aplicación.
 
 ---
 <p align="center">Desarrollado bajo estándares avanzados de ingeniería ciberfísica e IoT.</p>
