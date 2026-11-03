@@ -1,27 +1,28 @@
 # 🛡️ SentinelGuard: Sistema Biomecatrónico de Barrera Autónoma
 
-Subsistema de sensado y actuación de precisión basado en la plataforma **Arduino**, orientado a la detección de obstáculos por telemetría ultrasónica y control cinemático de posicionamiento angular mediante servomotor. La arquitectura integra un algoritmo de filtrado por promedio móvil de múltiples muestras y un manejo dinámico de acoplamiento de potencia para mitigar la fluctuación mecánica (*jitter*).
+Subsistema avanzado de sensado y actuación de precisión basado en la plataforma **Arduino**, optimizado para la automatización inteligente de contenedores o barreras perimetrales mediante telemetría ultrasónica y control cinemático de posicionamiento angular. La arquitectura integra un algoritmo de filtrado por promedio móvil de múltiples muestras, gestión energética *fail-safe* por desacoplamiento dinámico y un lazo de control adaptativo con control de permanencia temporal.
 
 ---
 
 ## 📑 Tabla de Contenidos
 1. [Resumen Ejecutivo y Arquitectura del Subsistema](#-resumen-ejecutivo-y-arquitectura-del-subsistema)
 2. [Especificaciones Técnicas del Hardware y Matriz de Pines](#-especificaciones-técnicas-del-hardware-y-matriz-de-pines)
-3. [Algoritmo de Filtrado y Lógica de Control Cinemático](#-algoritmo-de-filtrado-y-lógica-de-control-cinemático)
-4. [Mitigación de Vibraciones y Gestión de Energía Fail-Safe](#-mitigación-de-vibraciones-y-gestión-de-energía-fail-safe)
-5. [Guía Metodológica de Implementación y Despliegue](#-guía-metodológica-de-implementación-y-despliegue)
+3. [Matriz Comparativa de Variantes de Firmware](#-matriz-comparativa-de-variantes-de-firmware)
+4. [Algoritmo de Filtrado y Lógica de Control Dinámico](#-algoritmo-de-filtrado-y-lógica-de-control-dinámico)
+5. [Mitigación de Vibraciones y Gestión de Energía Fail-Safe](#-mitigación-de-vibraciones-y-gestión-de-energía-fail-safe)
+6. [Guía Metodológica de Implementación y Despliegue](#-guía-metodológica-de-implementación-y-despliegue)
 
 ---
 
 ## 📌 Resumen Ejecutivo y Arquitectura del Subsistema
 
-El firmware implementa un lazo de control condicional basado en la distancia métrica evaluada por un transductor ultrasónico (**HC-SR04** o compatible). Al registrarse un objeto dentro del umbral geométrico establecido ($30\text{ cm} \le d \le 80\text{ cm}$), el microcontrolador energiza dinámicamente el servomotor para ejecutar un barrido angular balístico, estabilizando la posición final antes de retornar al estado de reposo de alta eficiencia energética.
+El proyecto **SentinelGuard** resuelve la apertura automatizada sin contacto mediante la emisión y recepción de pulsos acústicos de alta frecuencia a través de un transductor ultrasónico (**HC-SR04**). El sistema procesa las ondas reflejadas para determinar la proximidad del usuario, activando de forma síncrona un actuador angular (servomotor) bajo parámetros estrictos de temporización y seguridad ergonómica.
 
 ---
 
 ## 🛠️ Especificaciones Técnicas del Hardware y Matriz de Pines
 
-El diseño del circuito interconecta componentes de lógica de control y actuación discretas con los siguientes parámetros de asignación física:
+El diseño circuital interconecta componentes discretos de control y potencia bajo la siguiente topología de asignación física:
 
 | Periférico de Hardware | Pin / Conexión (Arduino) | Parámetro Funcional y Eléctrico |
 | :--- | :--- | :--- |
@@ -31,35 +32,41 @@ El diseño del circuito interconecta componentes de lógica de control y actuaci
 
 ---
 
-## 🔄 Algoritmo de Filtrado y Lógica de Control Cinemático
+## 📊 Matriz Comparativa de Variantes de Firmware
+
+El repositorio cuenta con dos versiones de código adaptadas a diferentes escenarios operativas e industriales. A continuación se detalla la diferenciación técnica:
+
+| Parámetro / Característica | Versión Base (`code sensor 5s - 80cm`) | Versión Avanzada Optimizada (`code sensor 3.5s - max cm`) |
+| :--- | :--- | :--- |
+| **Rango Geométrico de Detección** | Restringido de $30\text{ cm}$ a $80\text{ cm}$ | **Ampliado de $10\text{ cm}$ a $120\text{ cm}$** (Cobertura espacial superior y detección optimizada al 100%) |
+| **Tiempo de Apertura Inicial** | Fijo e inalterable de $5000\text{ ms}$ ($5\text{ segundos}$) | **Dinamizado a $3500\text{ ms}$** ($3.5\text{ segundos}$ de espera mínima obligatoria) |
+| **Control de Permanencia / Presencia** | Cierre automático estricto tras cumplirse el tiempo base | **Bucle de supervisión adaptativa (`while`)** de hasta $20\text{ segundos}$ adicionales que detecta si el usuario sigue presente o se retira anticipadamente |
+| **Algoritmo de Cierre Inteligente** | Secuencial lineal sin reevaluación de entorno | **Confirmación anti-parpadeo** (Doble lectura de $300\text{ ms}$) para evitar falsos cierres por interferencia óptica o acústica |
+
+---
+
+## 🔄 Algoritmo de Filtrado y Lógica de Control Dinámico
 
 1. **Filtrado por Promedio Móvil Temporal:**
-   * Con el objeto de neutralizar falsos positivos derivados de reflexiones espurias o ruido electromagnético, la función de ciclo principal efectúa tres mediciones secuenciales de distancia con un intervalo de $10\text{ ms}$, calculando la media aritmética discreta:
+   * Con el objeto de neutralizar falsos positivos derivados de reflexiones espurias o ruido electromagnético, el bucle principal efectúa tres mediciones secuenciales de distancia con un intervalo de $10\text{ ms}$, computando la media aritmética discreta:
      $$\bar{d} = \frac{\text{aver}[0] + \text{aver}[1] + \text{aver}[2]}{3}$$
-2. **Activación Condicional del Campo Vectorial:**
-   * Si el valor resultante de $\bar{d}$ se encuentra confinado estrictamente entre el rango operativo ($30\text{ cm}$ y $80\text{ cm}$), el sistema inicializa la rutina de actuación mecánica.
-3. **Control de Desplazamiento Gradual:**
-   * El barrido angular se ejecuta mediante un bucle iterativo de incremento controlado de $0^\circ$ a $180^\circ$ con pasos de $5^\circ$ y un retardo de modulación de $5\text{ ms}$, garantizando una transición fluida y sin sobreimpulsos mecánicos de torque.
+2. **Lógica de Permanencia Adaptativa (`code sensor 3.5s - max cm`):**
+   * Tras la apertura inicial de $3.5\text{ segundos}$, el firmware evalúa dinámicamente si el objeto permanece en el cono de cobertura. Si el usuario se retira antes de los $20\text{ segundos}$ límite, el sistema valida la ausencia mediante un re-muestreo de seguridad y ejecuta el cierre inmediato, optimizando los tiempos operativos del sistema biomecatrónico.
 
 ---
 
 ## 🛡️ Mitigación de Vibraciones y Gestión de Energía *Fail-Safe*
 
-* **Desacoplamiento Dinámico en Reposo (`servo.detach()`):** Para evitar la fatiga del circuito de control interno del servomotor y la generación de ruido audible o vibraciones parásitas, el firmware desacopla lógicamente la señal PWM del pin de salida cuando el actuador se encuentra en su posición base ($0^\circ$).
-* **Posicionamiento Inicial de Seguridad:** Durante la fase de inicialización (`setup()`), el eje se posiciona forzosamente en el origen angular antes de aplicar el acoplamiento de control, previniendo saltos de engranajes mecánicos al energizar el sistema.
+* **Desacoplamiento Dinámico en Reposo (`servo.detach()`):** Para evitar la fatiga térmica del circuito de control interno del servomotor y la generación de ruido audible o vibraciones parásitas, el firmware desacopla lógicamente la señal PWM del pin de salida al retornar a la posición base ($0^\circ$).
+* **Posicionamiento Inicial de Seguridad:** Durante la rutina de inicialización (`setup()`), el eje se posiciona forzosamente en el origen antes de habilitar el acoplamiento de control, previniendo saltos mecánicos en los engranajes al energizar el sistema.
 
 ---
 
 ## 🚀 Guía Metodológica de Implementación y Despliegue
 
-Para integrar y validar este código en su entorno de desarrollo local, proceda conforme a las siguientes directrices operativas:
-
-1. **Gestión de Dependencias del Compilador:**
-   * Asegúrese de importar la librería nativa del entorno de desarrollo para el manejo de actuadores angulares: `#include <Servo.h>`.
-2. **Validación del Mapeo Físico:**
-   * Conecte el pin Trigger al digital 5, el Echo al digital 6 y la línea de control del servo al digital 7 de su placa de desarrollo basada en microcontrolador ATmega.
-3. **Compilación y Transferencia:**
-   * Transfiera el binario compilado a la placa mediante el IDE de Arduino y verifique la correcta lectura del puerto serial de depuración si requiere telemetría métrica en tiempo real.
+1. **Gestión de Dependencias:** Importe la librería nativa del entorno para el manejo de actuadores angulares: `#include <Servo.h>`.
+2. **Validación del Mapeo Físico:** Verifique las conexiones del Trigger (Pin 5), Echo (Pin 6) y la línea PWM del servo (Pin 7).
+3. **Selección del Archivo Fuente:** Cargue al microcontrolador la variante de su preferencia ubicada en el repositorio según los requerimientos de rango y tiempo de retención deseados.
 
 ---
 <p align="center">Desarrollado bajo estándares avanzados de ingeniería ciberfísica e IoT.</p>
